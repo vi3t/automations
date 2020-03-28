@@ -1,0 +1,46 @@
+#!/bin/bash
+
+##
+#  File:
+#    letsencrypt_linkcert
+#  Description:
+#   Basic script to automate linking up the certificates from letsencrypt to the "live" folder.
+#   By default, you need to manually link one by one with
+#       sudo ln -s /etc/letsencrypt/archive/sitename.com/{privkey,fullchain,chain,cert}{0..9}.pem \
+#            /etc/letsencrypt/live/sitename.com/{privkey,fullchain,chain,cert}.pem
+##
+
+##
+# Copyright (C) 2020 Giang Nguyen <post@vi3t.net>
+##
+
+# Gotta run as root, checking up
+if [[ $EUID -ne 0 ]]; then
+        echo "Try run it again as root or with sudo (try: sudo $BASH_SOURCE)"
+        exit 1
+fi
+
+# Delete live folder to start with an empty folder
+rm -rf /etc/letsencrypt/live
+
+# Create the site-folders
+ls -l /etc/letsencrypt/archive/ |  awk '{ print $9 }' | while read dirname
+do
+  if [ -z "${dirname}" ]
+    then continue
+  else
+    mkdir -p /etc/letsencrypt/live/"${dirname}"
+  fi
+
+# Read latest modified files and create the link
+  ls -rt /etc/letsencrypt/archive/"${dirname}" | tail -n4 | while read filename
+  do
+    case "${filename}" in
+      privkey*) ln -s /etc/letsencrypt/archive/"${dirname}"/"${filename}" /etc/letsencrypt/live/"${dirname}"/privkey.pem ;;
+      fullchain*) ln -s /etc/letsencrypt/archive/"${dirname}"/"${filename}" /etc/letsencrypt/live/"${dirname}"/fullchain.pem ;;
+      chain*) ln -s /etc/letsencrypt/archive/"${dirname}"/"${filename}" /etc/letsencrypt/live/"${dirname}"/chain.pem ;;
+      cert*) ln -s /etc/letsencrypt/archive/"${dirname}"/"${filename}" /etc/letsencrypt/live/"${dirname}"/cert.pem ;;
+      *) continue ;;
+    esac
+  done
+done
